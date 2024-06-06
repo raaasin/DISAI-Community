@@ -87,7 +87,7 @@ def main():
                 csv_metadata = get_csv_metadata(df)
                 metadata_str = ", ".join(csv_metadata["columns"])
 
-                st.subheader("Enter your query:")
+                st.subheader("Enter your prompt:")
                 user_query = st.text_input("")
 
                 if user_query:
