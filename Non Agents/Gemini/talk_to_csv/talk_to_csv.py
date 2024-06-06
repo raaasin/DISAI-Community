@@ -1,15 +1,9 @@
 import streamlit as st
 import pandas as pd
-from dotenv import load_dotenv
-import os
 import google.generativeai as genai
 
-# Load environment variables
-load_dotenv()
-GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
 
-# Configure GenerativeAI
-genai.configure(api_key=GOOGLE_API_KEY)
+
 
 # Function to save CSV file
 def save_csv_file(df):
@@ -34,7 +28,15 @@ def main():
     st.sidebar.title("Upload CSV File")
     uploaded_file = st.sidebar.file_uploader("Choose a CSV file", type=["csv"])
 
-    if uploaded_file is not None:
+    st.sidebar.title("Gemini-API-Key")
+    GOOGLE_API_KEY=st.sidebar.text_input("",type="password")
+
+    if uploaded_file and GOOGLE_API_KEY  is not None:
+        
+        
+        # Configure GenerativeAI
+        genai.configure(api_key=GOOGLE_API_KEY)
+
         # Save the uploaded CSV file locally
         df = pd.read_csv(uploaded_file)
         save_csv_file(df)
@@ -50,7 +52,7 @@ def main():
 
         if user_query:
             # Generate content using user input
-            model = genai.GenerativeModel('gemini-1.5-pro-latest')
+            model = genai.GenerativeModel('gemini-1.5-flash')
             chat = model.start_chat(history=[])
             prompt_eng=(
                 f"You are graphbot. If the user asks to plot a graph, you only reply with the Python code of Matplotlib to plot the graph and save it as graph.png. "
