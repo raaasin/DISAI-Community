@@ -1,9 +1,7 @@
 import streamlit as st
 import pandas as pd
 import sqlite3
-from dotenv import load_dotenv
-import os
-from openai import OpenAI
+import google.generativeai as genai
 
 # Function to save CSV file
 def save_csv_file(df):
@@ -43,15 +41,12 @@ def create_prompt(schema):
 
 # Function to load Google Gemini Model and provide queries as response
 def get_response(question, prompt, api_key):
-    client = OpenAI(api_key=api_key)
-    response = client.chat.completions.create(
-        model="gpt-3.5-turbo",
-        messages=[
-            {"role": "system", "content": prompt},
-            {"role": "user", "content": question}
-        ]
-    )
-    return response.choices[0].message.content
+    genai.configure(api_key=api_key)
+    model = genai.GenerativeModel('gemini-1.5-flash')
+    response = model.generate_content(prompt + "\n" + question)
+    response = response.text
+    response = response.replace("```sql", "").replace("```", "")
+    return response
 
 # Function to retrieve query from the database
 def read_sql_query(sql, db_path):
@@ -67,12 +62,11 @@ def read_sql_query(sql, db_path):
 def main():
     st.title("DIGIOTAI GRAPH GENERATOR")
 
-    st.sidebar.title("OpenAI API Key")
-    st.sidebar.write("You can find your API key at https://platform.openai.com/account/api-keys")
-    OPENAI_API_KEY = st.sidebar.text_input("API Key", type="password")
+    st.sidebar.title("Google Gemini API Key")
+    st.sidebar.write("You can find your API key at https://cloud.google.com/apikeys")
+    GOOGLE_API_KEY = st.sidebar.text_input("API Key", type="password")
     
-    if OPENAI_API_KEY:
-        client = OpenAI(api_key=OPENAI_API_KEY)
+    if GOOGLE_API_KEY:
         st.sidebar.title("Upload File")
         uploaded_file = st.sidebar.file_uploader("Choose a file", type=["csv", "xlsx", "db"])
         
@@ -97,25 +91,14 @@ def main():
                         f"The user asks: {user_query}"
                     )
 
-                    response = client.chat.completions.create(
-                        model="gpt-3.5-turbo",
-                        messages=[
-                            {"role": "system", "content": "You are a helpful assistant."},
-                            {"role": "user", "content": prompt_eng}
-                        ]
-                    )
+                    response = get_response(user_query, prompt_eng, GOOGLE_API_KEY)
 
                     generated_content = st.empty()
-                    all_text = ""
+                    generated_content.text(response)
 
-                    for choice in response.choices:
-                        chunk_message = choice.message.content if choice.message else ''
-                        all_text += chunk_message
-                        generated_content.text(all_text)
-
-                    code_start = all_text.find("```python") + 9
-                    code_end = all_text.find("```", code_start)
-                    code = all_text[code_start:code_end]
+                    code_start = response.find("```python") + 9
+                    code_end = response.find("```", code_start)
+                    code = response[code_start:code_end]
 
                     generated_content.code(code, language="python")
 
@@ -125,22 +108,12 @@ def main():
                             st.image("graph.png")
                         except Exception as e:
                             prompt_eng = f"There has occurred an error while executing the code, please take a look at the error and strictly only reply with the full python code do not apologize or anything just give the code {str(e)}"
-                            response = client.chat.completions.create(
-                                model="gpt-3.5-turbo",
-                                messages=[
-                                    {"role": "system", "content": "You are a helpful assistant."},
-                                    {"role": "user", "content": prompt_eng}
-                                ]
-                            )
-                            all_text = ""
-                            for choice in response.choices:
-                                chunk_message = choice.message.content if choice.message else ''
-                                all_text += chunk_message
-                                generated_content.text(all_text)
+                            response = get_response(prompt_eng, GOOGLE_API_KEY)
+                            generated_content.text(response)
 
-                            code_start = all_text.find("```python") + 9
-                            code_end = all_text.find("```", code_start)
-                            code = all_text[code_start:code_end]
+                            code_start = response.find("```python") + 9
+                            code_end = response.find("```", code_start)
+                            code = response[code_start:code_end]
 
                             generated_content.code(code, language="python")
                             try:
@@ -167,25 +140,14 @@ def main():
                         f"The user asks: {user_query}"
                     )
 
-                    response = client.chat.completions.create(
-                        model="gpt-3.5-turbo",
-                        messages=[
-                            {"role": "system", "content": "You are a helpful assistant."},
-                            {"role": "user", "content": prompt_eng}
-                        ]
-                    )
+                    response = get_response(user_query, prompt_eng, GOOGLE_API_KEY)
 
                     generated_content = st.empty()
-                    all_text = ""
+                    generated_content.text(response)
 
-                    for choice in response.choices:
-                        chunk_message = choice.message.content if choice.message else ''
-                        all_text += chunk_message
-                        generated_content.text(all_text)
-
-                    code_start = all_text.find("```python") + 9
-                    code_end = all_text.find("```", code_start)
-                    code = all_text[code_start:code_end]
+                    code_start = response.find("```python") + 9
+                    code_end = response.find("```", code_start)
+                    code = response[code_start:code_end]
 
                     generated_content.code(code, language="python")
 
@@ -195,22 +157,12 @@ def main():
                             st.image("graph.png")
                         except Exception as e:
                             prompt_eng = f"There has occurred an error while executing the code, please take a look at the error and strictly only reply with the full python code do not apologize or anything just give the code {str(e)}"
-                            response = client.chat.completions.create(
-                                model="gpt-3.5-turbo",
-                                messages=[
-                                    {"role": "system", "content": "You are a helpful assistant."},
-                                    {"role": "user", "content": prompt_eng}
-                                ]
-                            )
-                            all_text = ""
-                            for choice in response.choices:
-                                chunk_message = choice.message.content if choice.message else ''
-                                all_text += chunk_message
-                                generated_content.text(all_text)
+                            response = get_response(prompt_eng, GOOGLE_API_KEY)
+                            generated_content.text(response)
 
-                            code_start = all_text.find("```python") + 9
-                            code_end = all_text.find("```", code_start)
-                            code = all_text[code_start:code_end]
+                            code_start = response.find("```python") + 9
+                            code_end = response.find("```", code_start)
+                            code = response[code_start:code_end]
 
                             generated_content.code(code, language="python")
                             try:
@@ -232,7 +184,7 @@ def main():
                 user_query = st.text_input("")
 
                 if user_query:
-                    sql_query = get_response(user_query, prompt, OPENAI_API_KEY)
+                    sql_query = get_response(user_query, prompt, GOOGLE_API_KEY)
                     st.subheader("Generated SQL Query:")
                     st.code(sql_query, language="sql")
 
@@ -245,7 +197,7 @@ def main():
         else:
             st.sidebar.info("Please upload a file first.")
     else:
-        st.sidebar.warning("Please enter your OpenAI API key.")
+        st.sidebar.warning("Please enter your Google Gemini API key.")
 
 if __name__ == "__main__":
     main()
