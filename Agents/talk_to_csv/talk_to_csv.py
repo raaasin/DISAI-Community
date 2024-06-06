@@ -1,144 +1,146 @@
-import streamlit as st
+from langchain import OpenAI
+from langchain_experimental.agents import create_pandas_dataframe_agent
 import pandas as pd
-from dotenv import load_dotenv
+from dotenv import load_dotenv 
+import json
+import streamlit as st
 import os
-import google.generativeai as genai
-
-# Load environment variables
 load_dotenv()
-GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
+API_KEY = os.getenv("OPENAI_API_KEY")
 
-# Configure GenerativeAI
-genai.configure(api_key=GOOGLE_API_KEY)
 
-# Function to save CSV file
-def save_csv_file(df):
-    df.to_csv("data.csv", index=False)
+def csv_tool(filename : str):
 
-# Function to gather metadata about the CSV file
-def get_csv_metadata(df):
-    metadata = {
-        "columns": df.columns.tolist(),
-        "data_types": df.dtypes.to_dict(),
-        "null_values": df.isnull().sum().to_dict(),
-        "example_data": df.head().to_dict()
-    }
-    return metadata
+    df = pd.read_csv(filename)
+    llm=OpenAI(openai_api_key=API_KEY,temperature=0)
+    return create_pandas_dataframe_agent(llm, df, verbose=True)
 
-# Define Streamlit app
-def main():
-    # Title
-    st.title("DIGIOTAI GRAPH GENERATOR")
+def ask_agent(agent, query):
+    """
+    Query an agent and return the response as a string.
 
-    # File uploader for CSV file
-    st.sidebar.title("Upload CSV File")
-    uploaded_file = st.sidebar.file_uploader("Choose a CSV file", type=["csv"])
+    Args:
+        agent: The agent to query.
+        query: The query to ask the agent.
 
-    if uploaded_file is not None:
-        # Save the uploaded CSV file locally
-        df = pd.read_csv(uploaded_file)
-        save_csv_file(df)
-        st.sidebar.success("CSV file uploaded successfully!")
+    Returns:
+        The response from the agent as a string.
+    """
+    # Prepare the prompt with query guidelines and formatting
+    prompt = (
+        """
+        Let's decode the way to respond to the queries. The responses depend on the type of information requested in the query. 
 
-        # Get metadata about the CSV file
-        csv_metadata = get_csv_metadata(df)
-        metadata_str = ", ".join(csv_metadata["columns"])
+        1. If the query requires a table, format your answer like this:
+           {"table": {"columns": ["column1", "column2", ...], "data": [[value1, value2, ...], [value1, value2, ...], ...]}}
 
-        # User input for query
-        st.subheader("Enter your query:")
-        user_query = st.text_input("")
+        2. For a bar chart, respond like this:
+           {"bar": {"columns": ["A", "B", "C", ...], "data": [25, 24, 10, ...]}}
 
-        if user_query:
-            # Generate content using user input
-            model = genai.GenerativeModel('gemini-1.5-pro-latest')
-            chat = model.start_chat(history=[])
-            prompt_eng=(
-                f"You are graphbot. If the user asks to plot a graph, you only reply with the Python code of Matplotlib to plot the graph and save it as graph.png. "
-                f"The data is in data.csv and its attributes are: {metadata_str}. If the user does not ask for a graph, you only reply with the answer to the query. "
-                f"The user asks: {user_query}"
-            )
-            response = chat.send_message(prompt_eng, stream=True,generation_config=genai.types.GenerationConfig(
-        candidate_count=1,
-        temperature=0.2))
+        3. If a line chart is more appropriate, your reply should look like this:
+           {"line": {"columns": ["A", "B", "C", ...], "data": [25, 24, 10, ...]}}
 
-            # Initialize placeholder for displaying generated content
-            generated_content = st.empty()
-            all_text = ""
-            # Display generated content dynamically
-            for chunk in response:
-                # Update the content dynamically
-                all_text += chunk.text
-                generated_content.text(all_text)
-            
-            # Display the code block
-            code = response.text.replace("```python", "").replace("```", "")
-            generated_content.code(code, language="python")
+        Note: We only accommodate two types of charts: "bar" and "line".
 
-            # If response in its entirety is a code, execute it
-            if '```python' in response.text:
-                try:
-                    exec(code)
-                    st.image("graph.png")
-                    
-                except Exception as e:
-                    prompt_eng="there has occured an error while executing the code, please take a look at the error and strictly only reply with the full python code do not apologize or anything just give the code "+str(e)
-                    response = chat.send_message(prompt_eng, stream=True,generation_config=genai.types.GenerationConfig(
-                    candidate_count=1,
-                    temperature=0.2))
-                    all_text = ""
-                    # Display generated content dynamically
-                    for chunk in response:
-                        # Update the content dynamically
-                        all_text += chunk.text
-                        generated_content.text(all_text)
-                    # Display the code block
-                    code = response.text.replace("```python", "").replace("```", "")
-                    generated_content.code(code, language="python")
-                    try:
-                        exec(code)
-                        st.image("graph.png")
-                    except Exception as e:
-                        prompt_eng="Again another error occured, please take a look at the error and strictly only reply with the full python code do not apologize or anything just give the code "+str(e)
-                        response = chat.send_message(prompt_eng, stream=True,generation_config=genai.types.GenerationConfig(
-                        candidate_count=1,
-                        temperature=0.3))
-                        all_text = ""
-                        # Display generated content dynamically
-                        for chunk in response:
-                            # Update the content dynamically
-                            all_text += chunk.text
-                            generated_content.text(all_text)
-                        # Display the code block
-                        code = response.text.replace("```python", "").replace("```", "")
-                        generated_content.code(code, language="python")
-                        try:
-                            exec(code)
-                            st.image("graph.png")
-                        except Exception as e:
-                            prompt_eng="Again another error occured, please take a look at the error and strictly only reply with the full python code do not apologize or anything just give the code "+str(e)
-                            response = chat.send_message(prompt_eng, stream=True,generation_config=genai.types.GenerationConfig(
-                            candidate_count=1,
-                            temperature=1))
-                            all_text = ""
-                            # Display generated content dynamically
-                            for chunk in response:
-                                # Update the content dynamically
-                                all_text += chunk.text
-                                generated_content.text(all_text)
-                            # Display the code block
-                            code = response.text.replace("```python", "").replace("```", "")
-                            generated_content.code(code, language="python")
-                            try:
-                                exec(code)
-                                st.image("graph.png")
-                            except:
-                                generated_content.text("Hey After the 4th try, It seems I'm unable to generate the chart for this query. Please try later again.")
-            else:
-                st.write(response.text)
+        4. For a plain question that doesn't need a chart or table, your response should be:
+           {"answer": "Your answer goes here"}
 
-    else:
-        st.sidebar.info("Please upload a CSV file first.")
+        For example:
+           {"answer": "The Product with the highest Orders is '15143Exfo'"}
 
-if __name__ == "__main__":
-    main()
-    
+        5. If the answer is not known or available, respond with:
+           {"answer": "I do not know."}
+
+        Return all output as a string. Remember to encase all strings in the "columns" list and data list in double quotes. 
+        For example: {"columns": ["Products", "Orders"], "data": [["51993Masc", 191], ["49631Foun", 152]]}
+
+        Now, let's tackle the query step by step. Here's the query for you to work on: 
+        """
+        + query
+    )
+
+    # Run the prompt through the agent and capture the response.
+    response = agent.run(prompt)
+
+    # Return the response converted to a string.
+    return str(response)
+
+def decode_response(response: str) -> dict:
+    """This function converts the string response from the model to a dictionary object.
+
+    Args:
+        response (str): response from the model
+
+    Returns:
+        dict: dictionary with response data
+    """
+    return json.loads(response)
+
+def write_answer(response_dict: dict):
+    """
+    Write a response from an agent to a Streamlit app.
+
+    Args:
+        response_dict: The response from the agent.
+
+    Returns:
+        None.
+    """
+
+    # Check if the response is an answer.
+    if "answer" in response_dict:
+        st.write(response_dict["answer"])
+
+    # Check if the response is a bar chart.
+    # Check if the response is a bar chart.
+    if "bar" in response_dict:
+        data = response_dict["bar"]
+        try:
+            df_data = {
+                    col: [x[i] if isinstance(x, list) else x for x in data['data']]
+                    for i, col in enumerate(data['columns'])
+                }       
+            df = pd.DataFrame(df_data)
+            df.set_index("Products", inplace=True)
+            st.bar_chart(df)
+        except ValueError:
+            print(f"Couldn't create DataFrame from data: {data}")
+
+# Check if the response is a line chart.
+    if "line" in response_dict:
+        data = response_dict["line"]
+        try:
+            df_data = {col: [x[i] for x in data['data']] for i, col in enumerate(data['columns'])}
+            df = pd.DataFrame(df_data)
+            df.set_index("Products", inplace=True)
+            st.line_chart(df)
+        except ValueError:
+            print(f"Couldn't create DataFrame from data: {data}")
+
+
+    # Check if the response is a table.
+    if "table" in response_dict:
+        data = response_dict["table"]
+        df = pd.DataFrame(data["data"], columns=data["columns"])
+        st.table(df)
+st.set_page_config(page_title="👨‍💻 Talk with your CSV")
+st.title("👨‍💻 Talk with your CSV")
+
+st.write("Please upload your CSV file below.")
+
+data = st.file_uploader("Upload a CSV" , type="csv")
+
+query = st.text_area("Send a Message")
+
+if st.button("Submit Query", type="primary"):
+    # Create an agent from the CSV file.
+    agent = csv_tool(data)
+
+    # Query the agent.
+    response = ask_agent(agent=agent, query=query)
+
+    # Decode the response.
+    decoded_response = decode_response(response)
+
+    # Write the response to the Streamlit app.
+    write_answer(decoded_response)
