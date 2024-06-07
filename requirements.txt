@@ -1,0 +1,10 @@
+streamlit
+openai
+streamlit_chat
+streamlit_image_select
+pandas
+langchain_community
+google-generativeai
+pysqlite3 
+duckduckgo_search
+newspaper3k
