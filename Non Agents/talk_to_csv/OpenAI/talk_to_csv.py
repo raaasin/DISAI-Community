@@ -65,7 +65,7 @@ def read_sql_query(sql, db_path):
 
 # Define Streamlit app
 def main():
-    st.title("DIGIOTAI GRAPH GENERATOR")
+    st.title("DISAI GRAPH GENERATOR")
 
     st.sidebar.title("OpenAI API Key")
     st.sidebar.write("You can find your API key at https://platform.openai.com/account/api-keys")
