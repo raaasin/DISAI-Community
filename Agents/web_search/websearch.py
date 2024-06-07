@@ -8,9 +8,8 @@ from langchain_community.tools import DuckDuckGoSearchRun
 from langchain_community.callbacks import StreamlitCallbackHandler
 from langchain.agents import AgentExecutor, Tool, create_react_agent
 
-st.set_page_config(page_title="ChatWeb", page_icon="🌐")
-st.header('Chatbot with Internet Access')
-st.write('Equipped with internet access, enables users to ask questions about recent events')
+st.header('Websearch Agent')
+st.write('Equipped with internet access, AMA!')
 
 class InternetChatbot:
 
